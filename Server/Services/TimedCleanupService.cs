@@ -1,6 +1,5 @@
 ﻿using Data;
 using Domain;
-using Microsoft.EntityFrameworkCore;
 
 namespace Server.Services
 {
@@ -12,12 +11,10 @@ namespace Server.Services
             _service = service;
         }
 
-
         public async Task Cleanup()
         {
             try
             {
-                
                 var scope = _service.CreateScope();
                 Context _context = scope.ServiceProvider.GetRequiredService<Context>();
 
@@ -51,15 +48,12 @@ namespace Server.Services
                                 }
                             }
                         }
-
                     }
-
                     _context.Papers.RemoveRange(expiredRecords);
                     await _context.SaveChangesAsync();
                 }
-
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
         }
