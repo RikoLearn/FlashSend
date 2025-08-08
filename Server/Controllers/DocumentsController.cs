@@ -23,6 +23,9 @@ namespace Server.Controllers
 
             var paper = _context.Papers.FirstOrDefault(x => x.UniqueNumber == uniqueNumber);
 
+            if (paper == null)
+                return BadRequest(new Exception(nameof(paper)).Message);
+
             var document = new Document(paper, type.ToString(), content, type);
 
             _context.Documents.Add(document);
@@ -78,6 +81,8 @@ namespace Server.Controllers
                   fileName + Path.GetExtension(file.FileName)
              );
 
+            if (paper == null)
+                return BadRequest(new Exception(nameof(paper)).Message);
 
             var document = new Document(paper, Path.GetFileNameWithoutExtension(file.FileName), folderPathUrl, Path.GetExtension(file.FileName), (int)file.Length, type);
 
@@ -94,6 +99,9 @@ namespace Server.Controllers
 
             var paper = _context.Papers.FirstOrDefault(x => x.UniqueNumber == uniqueNumber);
 
+            if (paper == null)
+                return NotFound(new Exception(nameof(paper)).Message);
+
             var documents = _context.Documents.Where(x => x.PaperId == paper.Id).ToList();
 
             foreach (var item in documents)
@@ -107,8 +115,6 @@ namespace Server.Controllers
                     System.IO.File.Delete(folderPath);
                 }
             }
-
-
 
             _context.Papers.Remove(paper);
             await _context.SaveChangesAsync();
