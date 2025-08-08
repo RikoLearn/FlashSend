@@ -1,0 +1,7 @@
+services:
+    ressa_download:
+        image: flash_send:0.0.1
+        restart: always
+        container_name: flash-send-service
+        ports:
+            - 5555:8080
