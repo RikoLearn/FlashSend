@@ -1,0 +1,25 @@
+﻿@Server_HostAddress = https://localhost:44375
+
+@expireTime=0
+POST {{Server_HostAddress}}/api/papers/{{expireTime}}
+
+###
+
+@uniqueNumber=0
+@content=string
+POST {{Server_HostAddress}}/api/documents/{{uniqueNumber}}?content={{content}}
+
+###
+
+DELETE {{Server_HostAddress}}/api/documents/{{uniqueNumber}}
+
+###
+
+POST {{Server_HostAddress}}/api/documents/Image/{{uniqueNumber}}
+Content-Type: application/json
+
+{
+  //IFormFile
+}
+
+###
