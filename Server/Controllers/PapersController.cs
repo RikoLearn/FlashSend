@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Data;
 using Domain;
 using Microsoft.AspNetCore.Mvc;
@@ -6,7 +7,8 @@ using Server.Services;
 namespace Server.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     public class PapersController : ControllerBase
     {
         public PapersController(Context context, IUniqueNumberService uniqueNumberService)

@@ -1,5 +1,7 @@
+using Asp.Versioning;
 using Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using Server.Services;
 
 namespace Server
@@ -11,7 +13,22 @@ namespace Server
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            
+
+            builder.Services.AddApiVersioning(options =>
+            {
+                options.DefaultApiVersion = new ApiVersion(1, 0);
+                options.AssumeDefaultVersionWhenUnspecified = true;
+                options.ReportApiVersions = true;
+                options.ApiVersionReader = ApiVersionReader.Combine(
+                    new UrlSegmentApiVersionReader(),
+                    new HeaderApiVersionReader("X-Api-Version")
+                );
+            }).AddApiExplorer(options =>
+            {
+                options.GroupNameFormat = "'v'VVV";
+                options.SubstituteApiVersionInUrl = true;
+            });
+
             builder.Services.AddControllers();
 
             builder.Services.AddDbContext<Context>(options =>
@@ -20,7 +37,12 @@ namespace Server
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
 
-            builder.Services.AddSwaggerGen();
+            //builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Flash Send", Version = "v1.0" });
+                c.SwaggerDoc("v2", new OpenApiInfo { Title = "Flash Send", Version = "v2.0" });
+            });
 
             builder.Services.AddScoped<IUniqueNumberService, UniqueNumberService>();
 
@@ -33,7 +55,12 @@ namespace Server
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI();
+
+                app.UseSwaggerUI(options =>
+                {
+                    options.SwaggerEndpoint("v1/swagger.json", "Flash Send API V1");
+                    options.SwaggerEndpoint("v2/swagger.json", "Flash Send API V2");
+                });
             }
 
             app.UseHttpsRedirection();

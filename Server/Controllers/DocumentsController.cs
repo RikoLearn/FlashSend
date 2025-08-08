@@ -1,11 +1,13 @@
-﻿using Data;
+﻿using Asp.Versioning;
+using Data;
 using Domain;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Server.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     public class DocumentsController : ControllerBase
     {
         public DocumentsController(Context context)
