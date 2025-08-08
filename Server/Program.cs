@@ -11,7 +11,7 @@ namespace Server
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-
+            f
             builder.Services.AddControllers();
 
             builder.Services.AddDbContext<Context>(options =>
