@@ -3,8 +3,7 @@
     public enum DocumnetType
     {
         Text = 1,
-        Image = 2,
-        File = 3,
-        Code = 4
+        File = 2,
+        Code = 3
     }
 }

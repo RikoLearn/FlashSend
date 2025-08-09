@@ -38,7 +38,7 @@ namespace Server.Services
 
                         foreach (var item in documents)
                         {
-                            if (item.Type == DocumnetType.Image || item.Type == DocumnetType.File)
+                            if (item.Type == DocumnetType.File)
                             {
                                 var folderPath = Path.Combine(
                                  Directory.GetCurrentDirectory(), item.FilePath

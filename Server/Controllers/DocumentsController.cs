@@ -15,8 +15,16 @@ namespace Server.Controllers
             _context = context;
         }
 
+        /// <summary>
+        /// Upload text/code as Document for a paper
+        /// </summary>
+        /// <param name="uniqueNumber"></param>
+        /// <param name="content"></param>
+        /// <param name="type"></param>
+        /// <response code="200">Upload Successfully</response>
+        /// <response code="400">operation problem</response>
         [HttpPost("{uniqueNumber}")]
-        public async Task<IActionResult> Create(int uniqueNumber, string content, DocumnetType type = DocumnetType.Text)
+        public async Task<IActionResult> UploadTextDocument(int uniqueNumber, string content, DocumnetType type = DocumnetType.Text)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -35,25 +43,35 @@ namespace Server.Controllers
             return Ok();
         }
 
-        [HttpPost("Image/{uniqueNumber}")]
-        public async Task<IActionResult> Create(int uniqueNumber, IFormFile file, DocumnetType type = DocumnetType.Image)
+        /// <summary>
+        /// Upload File as Document for a paper
+        /// </summary>
+        /// <param name="uniqueNumber">paper unique number</param>
+        /// <param name="file">file</param>
+        /// <param name="type">type of documnet</param>
+        /// <response code="200">Upload Successfully</response>
+        /// <response code="400">operation problem</response>
+        [HttpPost("File/{uniqueNumber}")]
+        public async Task<IActionResult> UploadFileDocument(int uniqueNumber, IFormFile file)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            //try catch باید اضافه بشه 
+            // TODO: try catch should be added
+
+            // TODO: validate memetype file should be added
 
             const int maxFileSize = 10 * 1024 * 1024;
 
             if (file == null || file.Length == 0)
             {
-                ModelState.AddModelError("file", "لطفا یک فایل انتخاب کنید.");
+                ModelState.AddModelError("file", "please select a file.");
                 return BadRequest(ModelState);
             }
 
             if (file.Length > maxFileSize)
             {
-                ModelState.AddModelError("file", $"حجم فایل نباید بیشتر از {maxFileSize / (1024 * 1024)} مگابایت باشد.");
-                return BadRequest(ModelState);
+                ModelState.AddModelError("file", $"file size should'nt be more than {maxFileSize / (1024 * 1024)}MB");
+
             }
 
             var paper = _context.Papers.FirstOrDefault(x => x.UniqueNumber == uniqueNumber);
@@ -70,7 +88,7 @@ namespace Server.Controllers
             var path = Path.Combine(folderPath,
                 fileName + Path.GetExtension(file.FileName));
 
-            // encrption باید اضافه بشه
+            // TODO: encryption should be added
 
             using (var stream = new FileStream(path, FileMode.Create))
             {
@@ -84,7 +102,7 @@ namespace Server.Controllers
             if (paper == null)
                 return BadRequest(new Exception(nameof(paper)).Message);
 
-            var document = new Document(paper, Path.GetFileNameWithoutExtension(file.FileName), folderPathUrl, Path.GetExtension(file.FileName), (int)file.Length, type);
+            var document = new Document(paper, Path.GetFileNameWithoutExtension(file.FileName), folderPathUrl, Path.GetExtension(file.FileName), (int)file.Length, DocumnetType.File);
 
             _context.Documents.Add(document);
 
@@ -93,6 +111,12 @@ namespace Server.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Delete paper directly
+        /// </summary>
+        /// <param name="uniqueNumber"></param>
+        /// <response code="200">Delete Successfully</response>
+        /// <response code="404">If the item is null</response>
         [HttpDelete("{uniqueNumber}")]
         public async Task<IActionResult> Delete(int uniqueNumber)
         {
@@ -106,7 +130,7 @@ namespace Server.Controllers
 
             foreach (var item in documents)
             {
-                if (item.Type == DocumnetType.Image || item.Type == DocumnetType.File)
+                if (item.Type == DocumnetType.File)
                 {
                     var folderPath = Path.Combine(
                      Directory.GetCurrentDirectory(), item.FilePath

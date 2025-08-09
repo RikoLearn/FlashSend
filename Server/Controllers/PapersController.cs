@@ -17,6 +17,13 @@ namespace Server.Controllers
             _uniqueNumberService = uniqueNumberService;
         }
 
+        /// <summary>
+        /// Create Paper for given expire time
+        /// between 10 , 30 , 60 Minute
+        /// </summary>
+        /// <param name="expireTime"></param>
+        /// <response code="200">Create with return paper unique number </response>
+        /// <response code="400">operation problem</response>
         [HttpPost]
         [Route("{expireTime}")]
         public async Task<IActionResult> Create(int expireTime)
