@@ -3,6 +3,7 @@ using Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Server.Services;
+using System.Reflection;
 
 namespace Server
 {
@@ -38,10 +39,14 @@ namespace Server
             builder.Services.AddEndpointsApiExplorer();
 
             //builder.Services.AddSwaggerGen();
-            builder.Services.AddSwaggerGen(c =>
+            builder.Services.AddSwaggerGen(options =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Flash Send", Version = "v1.0" });
-                c.SwaggerDoc("v2", new OpenApiInfo { Title = "Flash Send", Version = "v2.0" });
+                options.SwaggerDoc("v1", new OpenApiInfo { Title = "Flash Send", Version = "v1.0" });
+                options.SwaggerDoc("v2", new OpenApiInfo { Title = "Flash Send", Version = "v2.0" });
+
+                // for enable XML comments for swagger 
+                var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
             });
 
             builder.Services.AddScoped<IUniqueNumberService, UniqueNumberService>();
