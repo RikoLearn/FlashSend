@@ -2,7 +2,11 @@
 {
     public partial class Document
     {
-        protected Document() { }
+        protected Document()
+        {
+            Paper = null!;
+            Name = null!;
+        }
 
         public virtual Paper Paper { get; set; }
 

@@ -48,7 +48,6 @@ namespace Server.Controllers
         /// </summary>
         /// <param name="uniqueNumber">paper unique number</param>
         /// <param name="file">file</param>
-        /// <param name="type">type of documnet</param>
         /// <response code="200">Upload Successfully</response>
         /// <response code="400">operation problem</response>
         [HttpPost("File/{uniqueNumber}")]
@@ -130,7 +129,7 @@ namespace Server.Controllers
 
             foreach (var item in documents)
             {
-                if (item.Type == DocumnetType.File)
+                if (item.Type == DocumnetType.File && !string.IsNullOrEmpty(item.FilePath))
                 {
                     var folderPath = Path.Combine(
                      Directory.GetCurrentDirectory(), item.FilePath

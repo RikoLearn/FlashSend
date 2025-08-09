@@ -4,18 +4,18 @@
     {
         public Document(Paper paper, string name, string content, DocumnetType type = DocumnetType.Text)
         {
-            Paper = paper;
+            Paper = paper ?? throw new ArgumentNullException(nameof(paper));
+            Name = name ?? throw new ArgumentNullException(nameof(name));
             InsertDateTime = DateTime.Now;
-            Name = name;
             Content = content;
             Type = type;
         }
 
         public Document(Paper paper, string name, string filePath, string extension, int fileSize, DocumnetType type)
         {
-            Paper = paper;
+            Paper = paper ?? throw new ArgumentNullException(nameof(paper));
+            Name = name ?? throw new ArgumentNullException(nameof(name));
             InsertDateTime = DateTime.Now;
-            Name = name;
             FilePath = filePath;
             Extension = extension;
             Type = type;
@@ -24,7 +24,7 @@
 
         public Guid Id { get; private set; }
 
-        public  string Name { get; private set; }
+        public string Name { get; private set; }
 
         public string? Content { get; private set; }
 
