@@ -5,9 +5,6 @@ namespace Server.Services
 {
     public class UniqueNumberService : IUniqueNumberService
     {
-        private readonly Context _context;
-        private readonly Random _random = new Random();
-
         public UniqueNumberService(Context context)
         {
             _context = context;
@@ -34,5 +31,9 @@ namespace Server.Services
 
             throw new Exception("Failed to generate a unique number after multiple attempts");
         }
+
+        private readonly Context _context;
+        private readonly Random _random = new Random();
+
     }
 }

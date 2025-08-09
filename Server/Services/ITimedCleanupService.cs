@@ -2,6 +2,6 @@
 {
     public interface ITimedCleanupService
     {
-        Task Cleanup();
+        Task Cleanup(CancellationToken cancellationToken = default);
     }
 }

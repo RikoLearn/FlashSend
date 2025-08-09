@@ -5,13 +5,12 @@ namespace Server.Services
 {
     public class TimedCleanupService : ITimedCleanupService
     {
-        private readonly IServiceProvider _service;
         public TimedCleanupService(IServiceProvider service)
         {
             _service = service;
         }
 
-        public async Task Cleanup()
+        public async Task Cleanup(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -19,19 +18,23 @@ namespace Server.Services
                 Context _context = scope.ServiceProvider.GetRequiredService<Context>();
 
                 var now = DateTime.Now;
-                var expiredRecords = _context.Papers.AsEnumerable()
-                    .Where(e => e.InsertDateTime.AddMinutes(e.ExpireTime.Minutes) < now)
-                    .ToList();
 
                 //var expiredRecords = await _context.Papers
                 //    .Where(e => e.InsertDateTime + e.ExpireTime < now)
                 //    .ToListAsync();
+
+                //TODO: use better solution for check expired papers
+                var expiredRecords = _context.Papers.AsEnumerable()
+                    .Where(e => e.InsertDateTime.AddMinutes(e.ExpireTime.Minutes) < now)
+                    .ToList();
 
                 if (expiredRecords.Any())
                 {
                     foreach (var rec in expiredRecords)
                     {
                         var documents = _context.Documents.Where(x => x.PaperId == rec.Id).ToList();
+                        if (documents.Count == 0)
+                            continue;
 
                         foreach (var item in documents)
                         {
@@ -43,19 +46,20 @@ namespace Server.Services
 
                                 if (File.Exists(folderPath))
                                 {
-
                                     File.Delete(folderPath);
                                 }
                             }
                         }
                     }
                     _context.Papers.RemoveRange(expiredRecords);
-                    await _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync(cancellationToken);
                 }
             }
             catch (Exception)
             {
             }
         }
+
+        private readonly IServiceProvider _service;
     }
 }

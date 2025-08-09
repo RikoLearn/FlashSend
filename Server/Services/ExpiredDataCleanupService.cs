@@ -14,13 +14,10 @@
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                await _timedCleanupService.Cleanup();
+                await _timedCleanupService.Cleanup(stoppingToken);
 
-                // هر ۱ ساعت چک کند
                 await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             }
         }
-
-
     }
 }
