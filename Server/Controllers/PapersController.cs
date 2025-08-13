@@ -49,8 +49,65 @@ namespace Server.Controllers
             return Ok(new { UniqueNumber = paper.UniqueNumber });
         }
 
+        [HttpGet]
+        [Route("{uniqueNumber}")]
+        public async Task<IActionResult> DocumentList(int uniqueNumber)
+        {
+
+            var paper = _context.Papers.FirstOrDefault(x => x.UniqueNumber == uniqueNumber);
+
+            if (paper == null)
+                return NotFound(new Exception(nameof(paper)).Message);
+
+            var documents = _context.Documents.Where(x => x.PaperId == paper.Id).ToList();
+            if (!documents.Any())
+                return NotFound(new Exception(nameof(documents)).Message);
+
+            var DocumentList = new List<DocumentDto>();
+
+            foreach (var item in documents)
+            {
+                DocumentList.Add(new DocumentDto()
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    Content = item.Content,
+                    Size = item.FileSize,
+                    Type = item.Type,
+                    UploadedAt = item.InsertDateTime,
+                    Language = item.Type == DocumnetType.Code ? Language.CSharp : Language.Auto,
+                });
+            }
+
+
+            return Ok(DocumentList);
+        }
 
         private readonly Context _context;
         private readonly IUniqueNumberService _uniqueNumberService;
     }
+    public class DocumentDto
+    {
+        public Guid Id { get; set; }            
+        public DocumnetType Type { get; set; }
+        public string Name { get; set; }         
+        public long? Size { get; set; }        
+        public string Content { get; set; }      
+        public Language? Language { get; set; }  
+        public DateTime? UploadedAt { get; set; }
+    }
+
+
+    public enum Language
+    {
+        Auto,
+        CSharp,
+        Html,
+        Cpp,
+        Python,
+        Php,
+        JavaScript,
+        Java
+    }
+
 }

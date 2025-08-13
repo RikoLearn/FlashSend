@@ -145,6 +145,31 @@ namespace Server.Controllers
             return Ok();
         }
 
+        [HttpGet]
+        [Route("File/{UniqueNumber}/{fileId}")]
+        public async Task<IActionResult> Download(int uniqueNumber, Guid fileId)
+        {
+
+            var paper = _context.Papers.FirstOrDefault(x => x.UniqueNumber == uniqueNumber);
+
+            if (paper == null)
+                return NotFound(new Exception(nameof(paper)).Message);
+
+            var document = _context.Documents.Where(x => x.PaperId == paper.Id && x.Id == fileId).FirstOrDefault();
+
+            var folderPath = Path.Combine(
+                Directory.GetCurrentDirectory(), document.FilePath
+                );
+
+            if (!System.IO.File.Exists(folderPath))
+            {
+                return NotFound(); // File not found
+            }
+
+            var fileBytes = System.IO.File.ReadAllBytes(folderPath);
+            return File(fileBytes, "application/octet-stream", document.Name + document.Extension);
+        }
+
         private readonly Context _context;
     }
 }

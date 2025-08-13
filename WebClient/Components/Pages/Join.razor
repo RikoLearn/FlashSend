@@ -1,0 +1,87 @@
+﻿@page "/join/{UniqueNumber:int}"
+@using WebClient.Services
+@rendermode InteractiveServer
+@inject PaperService PaperService
+@inject NavigationManager Nav
+
+<h2 class="page-title rtl">
+  <span>برگه: <strong>@UniqueNumber.ToString("000000")</strong></span>
+</h2>
+
+<div class="panel">
+  <h3>مستندات</h3>
+  @if (documents == null)
+  {
+    @* <p class="muted">در حال بارگذاری...</p> *@
+        <p class="muted">سندی موجود نیست.</p>
+  }
+  @* else if (documents.Count == 0)
+  {
+    <p class="muted">سندی موجود نیست.</p>
+  } *@
+  else
+  {
+    <ul class="list">
+      @foreach (var d in documents)
+      {
+        <li class="item">
+          <span class="icon">@IconFor(d)</span>
+          <div class="meta">
+            <div class="title">@TitleFor(d)</div>
+            <div class="sub muted small">@SubFor(d)</div>
+          </div>
+          <span class="spacer"></span>
+          @if (d.Type == DocumentType.File)
+          {
+            <button class="ghost small" @onclick="() => DownloadFile(d)">دانلود</button>
+          }
+          else
+          {
+            <button class="ghost small" @onclick="() => ViewDocument(d)">مشاهده</button>
+          }
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+<DocumentViewer @ref="viewer" />
+
+@code {
+  [Parameter] public int UniqueNumber { get; set; }
+  List<DocumentDto> documents;
+  DocumentViewer viewer;
+
+  protected override async Task OnInitializedAsync()
+  {
+    documents = await PaperService.GetPaperAsync(UniqueNumber);
+    //if (documents == null) Nav.NavigateTo("/");
+  }
+
+  void ViewDocument(DocumentDto d) => viewer.Open(d, allowSave: true);
+
+  void DownloadFile(DocumentDto d)
+  {
+        Nav.NavigateTo($"https://localhost:44375/api/v1/Documents/File/{UniqueNumber}/{d.Id}", forceLoad: true);
+    // نیاز به API دانلود فایل داریم. در صورت وجود لینک، همین‌جا استفاده کن.
+  }
+
+  string IconFor(DocumentDto d) => d.Type switch
+  {
+    DocumentType.Text => "📝",
+    DocumentType.Code => "💻",
+    DocumentType.File => "📎",
+    _ => "📄"
+  };
+
+  string TitleFor(DocumentDto d) => d.Type switch
+  {
+    DocumentType.Text => "متن",
+    DocumentType.Code => "کد",
+    DocumentType.File => d.Name ?? "فایل",
+    _ => "سند"
+  };
+
+  string SubFor(DocumentDto d)
+    => d.Type == DocumentType.File && d.Size.HasValue ? $"{d.Size.Value / 1024} KB" : "";
+}

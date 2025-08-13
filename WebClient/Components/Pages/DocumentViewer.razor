@@ -1,0 +1,86 @@
+﻿@using WebClient.Services
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+@if (open)
+{
+    <div class="modal">
+        <div class="modal-card large rtl">
+            <div class="modal-header">
+                <h3>@title</h3>
+                <span class="spacer"></span>
+                @if (allowSave && (doc?.Type == DocumentType.Text || doc?.Type == DocumentType.Code))
+                {
+                    <input class="input small" style="width:140px" placeholder="example.txt" @bind="fileName" />
+                    <button class="ghost small" @onclick="Save">ذخیره</button>
+                }
+                <button class="ghost" @onclick="Close">بستن</button>
+            </div>
+
+            @if (doc?.Type == DocumentType.Text)
+            {
+                <pre class="preview-text">@doc.Content</pre>
+            }
+            else if (doc?.Type == DocumentType.Code)
+            {
+                <pre><code class="@($"language-{PrismClass(doc)}")">@((MarkupString)EscapeHtml(doc.Content))</code></pre>
+            }
+            else if (doc?.Type == DocumentType.File)
+            {
+                <p class="muted">برای مشاهده فایل، آن را دانلود کنید.</p>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    bool open;
+    bool allowSave;
+    DocumentDto doc;
+    string title;
+    string fileName = "document.txt";
+
+    public void Open(DocumentDto d, bool allowSave)
+    {
+        doc = d;
+        title = d.Type switch
+        {
+            DocumentType.Text => "مشاهده متن",
+            DocumentType.Code => "مشاهده کد",
+            DocumentType.File => d.Name ?? "فایل",
+            _ => "سند"
+        };
+        this.allowSave = allowSave;
+        open = true;
+        StateHasChanged();
+        _ = Highlight();
+    }
+
+    public void Close() => open = false;
+
+    async Task Highlight()
+    {
+        await JS.InvokeVoidAsync("site.highlightAll");
+    }
+
+    async Task Save()
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(doc?.Content ?? "");
+        await JS.InvokeVoidAsync("site.downloadBytes", fileName, "text/plain;charset=utf-8", bytes);
+    }
+
+    static string EscapeHtml(string s)
+      => s?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+
+    string PrismClass(DocumentDto d) => d.Language switch
+    {
+        Language.CSharp => "csharp",
+        Language.Html => "markup",
+        Language.Cpp => "cpp",
+        Language.Python => "python",
+        Language.Php => "php",
+        Language.JavaScript => "javascript",
+        Language.Java => "java",
+        _ => ""
+    };
+}

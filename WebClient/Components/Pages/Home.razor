@@ -1,7 +1,98 @@
 ﻿@page "/"
+@using WebClient.Services
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+@inject NavigationManager Nav
+@inject PaperService PaperService
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 
-Welcome to your new app.
+<div class="container rtl">
+    <div class="card center">
+        <h1 style="color:white">Flash Send</h1>
+        @* <p class="muted">ساده، مینیمال، کاربردی</p> *@
+
+        <div class="actions">
+            <button class="primary" @onclick="() => showCreate = true">ایجاد برگه</button>
+            <button class="ghost" @onclick="() => showJoin = true">ورود به برگه</button>
+        </div>
+    </div>
+</div>
+
+@if (showCreate)
+{
+    <div class="modal">
+        <div class="modal-card">
+            <h3>انتخاب زمان انقضا</h3>
+            <div class="chips">
+                @foreach (var m in new[] { 10, 30, 60 })
+                {
+                    <button class="chip @(expireMinutes == m ? "chip-active" : "")" @onclick="() => expireMinutes = m">@m دقیقه</button>
+                }
+            </div>
+            <div class="modal-actions">
+                <button class="primary" disabled="@(expireMinutes == 0 || creating)" @onclick="CreatePaper">
+                    @(creating ? "در حال ایجاد..." : "ایجاد")
+                </button>
+                <button class="ghost" @onclick="() => showCreate = false">انصراف</button>
+            </div>
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <p class="error">@error</p>
+            }
+        </div>
+    </div>
+}
+
+@if (showJoin)
+{
+    <div class="modal">
+        <div class="modal-card">
+            <h3>ورود به برگه</h3>
+            <input class="input" placeholder="کد ۶ رقمی" @bind="joinCode" maxlength="6" />
+            <div class="modal-actions">
+                <button class="primary" disabled="@(!IsValidJoin)" @onclick="JoinPaper">پیوستن</button>
+                <button class="ghost" @onclick="() => showJoin = false">انصراف</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    bool showCreate, showJoin, creating;
+    int expireMinutes;
+    string error;
+    string joinCode;
+
+    bool IsValidJoin => !string.IsNullOrWhiteSpace(joinCode) && joinCode.Length == 6 && int.TryParse(joinCode, out _);
+
+    async Task CreatePaper()
+    {
+        try
+        {
+            creating = true;
+            var code = await PaperService.CreatePaperAsync(expireMinutes);
+
+            // ثبت زمان شروع برای تایمر (برای رفرش صفحه)
+            var start = DateTime.UtcNow;
+            await LocalStorage.SetItemAsync($"paper:{code}:start", start);
+            await LocalStorage.SetItemAsync($"paper:{code}:minutes", expireMinutes);
+
+            Nav.NavigateTo($"/paper/{code}");
+        }
+        catch (Exception ex)
+        {
+            error = "ایجاد برگه ناموفق بود.";
+            Console.Error.WriteLine(ex);
+        }
+        finally
+        {
+            creating = false;
+        }
+    }
+
+    void JoinPaper()
+    {
+        Nav.NavigateTo($"/join/{joinCode}");
+    }
+}

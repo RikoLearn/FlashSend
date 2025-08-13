@@ -1,0 +1,297 @@
+﻿@page "/paper/{UniqueNumber:int}"
+@using WebClient.Services
+@rendermode InteractiveServer
+
+@inject PaperService PaperService
+@inject NavigationManager Nav
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+
+
+<h2 class="page-title rtl">
+    <span>کد برگه: <strong>@UniqueNumber.ToString("000000")</strong></span>
+    <span class="spacer"></span>
+    <span class="countdown">زمان باقی‌مانده: @remainingDisplay</span>
+    <button class="danger small" @onclick="DeletePaper">حذف برگه</button>
+</h2>
+
+<div class="grid rtl">
+    <div class="panel">
+        <h3>افزودن سند</h3>
+
+        <div class="tabs">
+            <button class="tab @(mode == DocumentType.Text ? "active" : "")" @onclick="() => mode = DocumentType.Text">متن</button>
+            <button class="tab @(mode == DocumentType.Code ? "active" : "")" @onclick="() => mode = DocumentType.Code">کد</button>
+            <button class="tab @(mode == DocumentType.File ? "active" : "")" @onclick="() => mode = DocumentType.File">فایل</button>
+        </div>
+
+        @if (mode == DocumentType.Text)
+        {
+            <div>
+                <textarea class="textarea" maxlength="1024" @bind="textContent" @bind:event="oninput" placeholder="متن خود را بنویسید..."></textarea>
+                <div class="muted small">باقی‌مانده: @(1024 - (textContent?.Length ?? 0)) کاراکتر</div>
+                <button class="primary" disabled="@string.IsNullOrWhiteSpace(textContent)" @onclick="SendText">ارسال متن</button>
+            </div>
+        }
+        else if (mode == DocumentType.Code)
+        {
+            <div>
+                <div class="row">
+                    <select class="select" @bind="selectedLanguage">
+                        @foreach (var lang in Enum.GetValues<Language>())
+                        {
+                            @* <option value="@lang">@LangLabel(lang)</option> *@
+                            <option value="@lang">@lang</option>
+                        }
+                    </select>
+                    <button class="ghost small" @onclick="DetectLanguage">تشخیص خودکار</button>
+                </div>
+                <textarea class="textarea mono" maxlength="2048" @bind="codeContent" @bind:event="oninput" placeholder="کد خود را اینجا قرار دهید..."></textarea>
+                <div class="muted small">باقی‌مانده: @(2048 - (codeContent?.Length ?? 0)) کاراکتر</div>
+                <button class="primary" disabled="@string.IsNullOrWhiteSpace(codeContent)" @onclick="SendCode">ارسال کد</button>
+
+                @if (!string.IsNullOrWhiteSpace(codeContent))
+                {
+                    <div class="preview">
+                        <h4>پیش‌نمایش</h4>
+                        <pre><code class="@($"language-{PrismClass(selectedLanguage, codeContent)}")">@((MarkupString)EscapeHtml(codeContent))</code></pre>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div>
+                <InputFile OnChange="OnFileChange" />
+                @if (!string.IsNullOrEmpty(uploadError))
+                {
+                    <div class="error small">@uploadError</div>
+                }
+                @if (uploading)
+                {
+                    <div class="muted small">در حال آپلود...</div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="panel">
+        <h3>لیست مستندات</h3>
+        @if (documents == null)
+        {
+            @* <p class="muted">در حال بارگذاری...</p> *@
+            <p class="muted">هنوز سندی ندارید.</p>
+        }
+        @* else if (documents.Count == 0)
+        {
+            <p class="muted">هنوز سندی ندارید.</p>
+        } *@
+        else
+        {
+            <ul class="list">
+                @foreach (var d in documents)
+                {
+                    <li class="item">
+                        <span class="icon">@IconFor(d)</span>
+                        <div class="meta">
+                            <div class="title">@TitleFor(d)</div>
+                            <div class="sub muted small">@SubFor(d)</div>
+                        </div>
+                        <span class="spacer"></span>
+                        @if (d.Type == DocumentType.File)
+                        {
+                            <button class="ghost small" @onclick="() => DownloadFile(d)">دانلود</button>
+                        }
+                        else
+                        {
+                            <button class="ghost small" @onclick="() => ViewDocument(d)">مشاهده</button>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+<DocumentViewer @ref="viewer" />
+
+@code {
+    [Parameter] public int UniqueNumber { get; set; }
+
+    DocumentType mode = DocumentType.Text;
+    List<DocumentDto> documents;
+    string textContent, codeContent, uploadError;
+    bool uploading;
+    Language selectedLanguage = Language.Auto;
+
+    System.Timers.Timer timer;
+    TimeSpan remaining;
+    string remainingDisplay => $"{remaining.Minutes:00}:{remaining.Seconds:00}";
+    DocumentViewer viewer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocs();
+        InitTimer();
+    }
+
+    async Task InitTimer()
+    {
+        // تلاش برای بازیابی دقیقه‌ها و زمان شروع از localStorage:
+        // اگر نداریم، از 30 دقیقه پیش‌فرض استفاده کن یا کاربر را به صفحه اول برگردان.
+        // var minutes = 30;
+        var minutes = await LocalStorage.GetItemAsync<int>($"paper:{UniqueNumber}:minutes");
+        var startUtc = DateTime.UtcNow;
+        // var startUtc = await LocalStorage.GetItemAsync<DateTime>($"paper:{UniqueNumber}:start");
+
+        // TODO: با JS interop localStorage را بخوان (یا از querystring بگیر)
+        // فرض: startUtc + minutes
+
+        timer = new System.Timers.Timer(1000);
+        timer.Elapsed += (s, e) =>
+        {
+            var end = startUtc.AddMinutes(minutes);
+            var now = DateTime.UtcNow;
+            var rem = end - now;
+            if (rem <= TimeSpan.Zero)
+            {
+                remaining = TimeSpan.Zero;
+                InvokeAsync(() =>
+            {
+                StateHasChanged();
+                timer.Stop();
+                Nav.NavigateTo("/");
+            });
+            }
+            else
+            {
+                remaining = new TimeSpan(0, rem.Minutes, rem.Seconds);
+                InvokeAsync(StateHasChanged);
+            }
+        };
+        timer.Start();
+    }
+
+    async Task LoadDocs()
+    {
+        documents = await PaperService.GetPaperAsync(UniqueNumber);
+        if (documents == null)
+        {
+            // 404
+            //  Nav.NavigateTo("/");
+        }
+    }
+
+    async Task SendText()
+    {
+        if (string.IsNullOrWhiteSpace(textContent)) return;
+        var ok = await PaperService.PostTextAsync(UniqueNumber, textContent);
+        if (ok)
+        {
+            textContent = string.Empty;
+            await LoadDocs();
+        }
+    }
+
+    async Task SendCode()
+    {
+        if (string.IsNullOrWhiteSpace(codeContent)) return;
+        var ok = await PaperService.PostCodeAsync(UniqueNumber, codeContent);
+        if (ok)
+        {
+            codeContent = string.Empty;
+            selectedLanguage = Language.Auto;
+            await LoadDocs();
+        }
+    }
+
+    async Task OnFileChange(InputFileChangeEventArgs e)
+    {
+        uploading = true;
+        uploadError = null;
+        try
+        {
+            var file = e.File;
+            var ok = await PaperService.PostFileAsync(UniqueNumber, e.File);
+            if (ok) await LoadDocs();
+            else uploadError = "آپلود ناموفق بود.";
+        }
+        catch (Exception ex)
+        {
+            uploadError = "خطا در آپلود فایل.";
+            Console.Error.WriteLine(ex);
+        }
+        finally
+        {
+            uploading = false;
+        }
+    }
+
+    async Task DeletePaper()
+    {
+        var ok = await PaperService.DeletePaperAsync(UniqueNumber);
+        Nav.NavigateTo("/");
+    }
+
+    void ViewDocument(DocumentDto d) => viewer.Open(d, allowSave: true);
+    void DownloadFile(DocumentDto d)
+    {
+        // نیاز به URL دانلود از API دارید. فعلا از محتوای موجود (اگر دارید) یا placeholder استفاده کنید.
+        // اگر API لینک مستقیم می‌دهد، همان را باز کنید:
+        Nav.NavigateTo($"https://localhost:44375/api/v1/Documents/File/{UniqueNumber}/{d.Id}", forceLoad: true);
+    }
+
+    void DetectLanguage()
+    {
+        selectedLanguage = GuessLanguage(codeContent);
+    }
+
+    Language GuessLanguage(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return Language.Auto;
+        var lc = code.ToLowerInvariant();
+
+        if (lc.Contains("#include") || lc.Contains("std::")) return Language.Cpp;
+        if (lc.Contains("using system") || lc.Contains("namespace") || lc.Contains("public class")) return Language.CSharp;
+        if (lc.Contains("<html") || lc.Contains("<div") || lc.Contains("</")) return Language.Html;
+        if (lc.Contains("def ") || lc.Contains("import ") || lc.Contains("print(")) return Language.Python;
+        if (lc.Contains("<?php") || lc.Contains("$")) return Language.Php;
+        if (lc.Contains("function ") || lc.Contains("=>") || lc.Contains("console.log")) return Language.JavaScript;
+        if (lc.Contains("public static void main") || lc.Contains("class ") && lc.Contains("public")) return Language.Java;
+        return Language.Auto;
+    }
+
+    string PrismClass(Language lang, string code)
+      => (lang == Language.Auto ? GuessLanguage(code) : lang) switch
+      {
+          Language.CSharp => "csharp",
+          Language.Html => "markup",
+          Language.Cpp => "cpp",
+          Language.Python => "python",
+          Language.Php => "php",
+          Language.JavaScript => "javascript",
+          Language.Java => "java",
+          _ => ""
+      };
+
+    string IconFor(DocumentDto d) => d.Type switch
+    {
+        DocumentType.Text => "📝",
+        DocumentType.Code => "💻",
+        DocumentType.File => "📎",
+        _ => "📄"
+    };
+
+    string TitleFor(DocumentDto d) => d.Type switch
+    {
+        DocumentType.Text => "متن",
+        DocumentType.Code => $"کد ({(d.Language?.ToString() ?? "Auto")})",
+        DocumentType.File => d.Name ?? "فایل",
+        _ => "سند"
+    };
+
+    string SubFor(DocumentDto d)
+      => d.Type == DocumentType.File && d.Size.HasValue ? $"{d.Size.Value / 1024} KB" : "";
+
+    static string EscapeHtml(string s)
+      => s?.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;") ?? "";
+}

@@ -1,4 +1,6 @@
+using Blazored.LocalStorage;
 using WebClient.Components;
+using WebClient.Services;
 
 namespace WebClient
 {
@@ -11,6 +13,11 @@ namespace WebClient
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
+
+            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:44375") });
+
+            builder.Services.AddScoped<PaperService>();
+            builder.Services.AddBlazoredLocalStorage();
 
             var app = builder.Build();
 
