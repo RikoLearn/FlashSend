@@ -34,7 +34,7 @@
                 <button class="primary" disabled="@(expireMinutes == 0 || creating)" @onclick="CreatePaper">
                     @(creating ? "در حال ایجاد..." : "ایجاد")
                 </button>
-                <button class="ghost" @onclick="() => showCreate = false">انصراف</button>
+                <button class="ghost" @onclick="() => { showCreate = false; error = string.Empty; }">انصراف</button>
             </div>
             @if (!string.IsNullOrEmpty(error))
             {
@@ -52,8 +52,12 @@
             <input class="input" placeholder="کد ۶ رقمی" @bind="joinCode" maxlength="6" />
             <div class="modal-actions">
                 <button class="primary" disabled="@(!IsValidJoin)" @onclick="JoinPaper">پیوستن</button>
-                <button class="ghost" @onclick="() => showJoin = false">انصراف</button>
+                <button class="ghost" @onclick="() => { showJoin = false; error = string.Empty; }">انصراف</button>
             </div>
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <p class="error">@error</p>
+            }
         </div>
     </div>
 }
@@ -91,8 +95,24 @@
         }
     }
 
-    void JoinPaper()
+    async Task JoinPaper()
     {
-        Nav.NavigateTo($"/join/{joinCode}");
+        try
+        {
+            var response = await PaperService.GetPaperAsync(int.Parse(joinCode));
+            if (response != null)
+            {
+                Nav.NavigateTo($"/join/{joinCode}");
+            }
+            else
+            {
+                error = "برگه ای با این کد یافت نشد.";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = "ورود به برگه ناموفق بود.";
+            Console.Error.WriteLine(ex);
+        }
     }
 }
