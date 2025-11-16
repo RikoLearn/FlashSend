@@ -1,4 +1,5 @@
 # Flash Send
+
 ![version](https://img.shields.io/badge/version-1.0.0-blue)
 [![.NET](https://github.com/RikoLearn/FlashSend/actions/workflows/dotnet.yml/badge.svg)](https://github.com/RikoLearn/FlashSend/actions/workflows/dotnet.yml)
 [![trivy](https://github.com/RikoLearn/FlashSend/actions/workflows/trivy.yml/badge.svg)](https://github.com/RikoLearn/FlashSend/actions/workflows/trivy.yml)
